@@ -1,0 +1,78 @@
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m???[39m 8 modules transformed.
+node.exe : [31mx[39m 
+Build failed in 2.04s
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpecified  
+  : ([31mx[39m Buil   
+ d failed in 2.04s:S    
+tring) [], RemoteEx    
+ception
+    + FullyQualifiedErr 
+   orId : NativeComman  
+  dError
+ 
+[31merror during build:
+[31m[vite:build-import-
+analysis] [plugin vite:b
+uild-import-analysis] 
+src/store/authStore.js 
+(77:79): Failed to 
+parse source for import 
+analysis because the 
+content contains 
+invalid JS syntax. If 
+you are using JSX, make 
+sure to name the file 
+with the .jsx or .tsx 
+extension.[31m
+file: [36mD:/dxsure-crm
+/src/store/authStore.js:
+77:79[31m
+[33m
+75:   };
+76: 
+77:   return 
+<AuthContext.Provider va
+lue={value}>{children}</
+AuthContext.Provider>;
+                        
+                        
+                        
+           ^
+78: }
+[31m
+    at getRollupError (f
+ile:///D:/dxsure-crm/nod
+e_modules/rollup/dist/es
+/shared/parseAst.js:406:
+41)
+    at error (file:///D:
+/dxsure-crm/node_modules
+/rollup/dist/es/shared/p
+arseAst.js:402:42)
+    at Object.error (fil
+e:///D:/dxsure-crm/node_
+modules/rollup/dist/es/s
+hared/node-entry.js:2264
+5:20)
+    at Object.error (fil
+e:///D:/dxsure-crm/node_
+modules/rollup/dist/es/s
+hared/node-entry.js:2168
+6:42)
+    at Object.transform 
+(file:///D:/dxsure-crm/n
+ode_modules/vite/dist/no
+de/chunks/dep-BK3b2jBa.j
+s:64913:14)[39m
+
