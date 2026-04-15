@@ -34,14 +34,15 @@ export function useCreateEmployee() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ email, password, name, phone, department, role }) => {
-      // Create auth user via Supabase admin (requires service role on backend)
-      // For frontend, we'll use signUp and then update profile
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Use frontend signup because admin.createUser requires a service role key.
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        email_confirm: true,
       });
       if (authError) throw authError;
+      if (!authData?.user?.id) {
+        throw new Error('Unable to create employee user. Please verify Supabase auth configuration.');
+      }
 
       const { data, error } = await supabase.from('profiles').upsert({
         id: authData.user.id,
