@@ -160,7 +160,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => logout.mutate()}
+            onClick={() => logout()}
             className={cn(
               'flex items-center justify-center gap-2 rounded-xl py-2 text-sm text-text-muted hover:text-danger hover:bg-danger/10 transition-colors',
               collapsed ? 'w-full px-2' : 'flex-1 px-3'
