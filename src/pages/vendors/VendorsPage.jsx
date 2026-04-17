@@ -9,6 +9,7 @@ import Textarea from '../../components/ui/Textarea';
 import Card from '../../components/ui/Card';
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '../../hooks/useVendors';
 import { formatDate } from '../../lib/utils';
+import { useAuth } from '../../hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,6 +64,7 @@ const columns = [
 ];
 
 export default function VendorsPage() {
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [editVendor, setEditVendor] = useState(null);
@@ -73,7 +75,7 @@ export default function VendorsPage() {
   const deleteVendor = useDeleteVendor();
 
   const handleCreate = async (data) => {
-    await createVendor.mutateAsync(data);
+    await createVendor.mutateAsync({ ...data, created_by: user?.id || null });
     setShowForm(false);
   };
 

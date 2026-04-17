@@ -14,7 +14,7 @@ import { cn } from '../../lib/utils';
 
 export default function TicketsPage() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState('');
@@ -23,7 +23,7 @@ export default function TicketsPage() {
   const createTicket = useCreateTicket();
 
   const handleCreate = async (data) => {
-    await createTicket.mutateAsync(data);
+    await createTicket.mutateAsync({ ...data, created_by: user?.id || null });
     setShowForm(false);
   };
 

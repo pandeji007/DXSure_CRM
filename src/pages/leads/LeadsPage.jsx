@@ -9,10 +9,12 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useLeads, useCreateLead } from '../../hooks/useLeads';
+import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
 export default function LeadsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [view, setView] = useState('table');
@@ -21,7 +23,7 @@ export default function LeadsPage() {
   const createLead = useCreateLead();
 
   const handleCreate = async (data) => {
-    await createLead.mutateAsync(data);
+    await createLead.mutateAsync({ ...data, created_by: user?.id || null });
     setShowForm(false);
   };
 

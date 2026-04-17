@@ -24,7 +24,7 @@ export default function FollowUpsPage() {
   const updateFollowUp = useUpdateFollowUp();
 
   const handleCreate = async (data) => {
-    await createFollowUp.mutateAsync({ ...data, user_id: user.id });
+    await createFollowUp.mutateAsync({ ...data, created_by: user.id });
     setShowForm(false);
   };
 
