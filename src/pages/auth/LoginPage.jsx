@@ -4,21 +4,20 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(1, 'Password is required'),
+  loginId: z.string().trim().min(1, 'Login ID is required'),
+  password: z.string().trim().min(1, 'Password is required'),
 });
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -30,17 +29,11 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data) => {
+    setIsSubmitting(true);
+
     try {
-      setServerError('');
-      setIsSubmitting(true);
-      
-      // Perform direct manual login
-      await login(data.email, data.password);
-      
-      // Redirect successfully 
+      await login(data.loginId, data.password);
       navigate('/dashboard', { replace: true });
-    } catch (e) {
-      setServerError(e.message || 'Invalid login credentials. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -65,18 +58,24 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Direct Form Error Display Render */}
-            {serverError && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-danger/10 text-danger border border-danger/20 text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <p>{serverError}</p>
-              </div>
-            )}
-
-            <Input label="Email" type="email" placeholder="admin@dxsure.com" icon={Mail} error={errors.email?.message} {...register('email')} />
+            <Input
+              label="Login ID"
+              type="text"
+              placeholder="demo-user"
+              icon={User}
+              error={errors.loginId?.message}
+              {...register('loginId')}
+            />
 
             <div className="relative">
-              <Input label="Password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" icon={Lock} error={errors.password?.message} {...register('password')} />
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                icon={Lock}
+                error={errors.password?.message}
+                {...register('password')}
+              />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] text-text-muted hover:text-text-primary transition-colors">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -85,7 +84,7 @@ export default function LoginPage() {
             <Button type="submit" loading={isSubmitting} className="w-full mt-4" size="lg">Sign In</Button>
           </form>
 
-          <p className="text-xs text-text-muted text-center mt-6">Contact your administrator if you need access</p>
+          <p className="text-xs text-text-muted text-center mt-6">Use any dummy login ID and password to continue</p>
         </div>
       </motion.div>
     </div>

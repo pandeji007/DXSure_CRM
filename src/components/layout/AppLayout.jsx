@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { AnimatePresence, motion } from 'framer-motion';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -42,6 +43,11 @@ export default function AppLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         <Header onMenuClick={() => setMobileOpen(true)} />
+        {!isSupabaseConfigured && (
+          <div className="border-b border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning md:px-6">
+            Running in local demo mode. Add your Supabase keys in `.env` to load live CRM data.
+          </div>
+        )}
         <main className="flex-1">
           <Outlet />
         </main>
