@@ -8,26 +8,58 @@ import StatCard from '../../components/dashboard/StatCard';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { useFinanceEntries, useCreateFinanceEntry, useFinanceStats } from '../../hooks/useFinance';
+import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency } from '../../lib/utils';
 import { cn } from '../../lib/utils';
 import { FINANCE_TYPES } from '../../constants';
 
 export default function FinancePage() {
+  const { user, isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('');
-  const { data: entries, isLoading } = useFinanceEntries({ type: activeTab || undefined });
-  const { data: stats } = useFinanceStats();
+  const scopedCreatedBy = isAdmin ? undefined : user?.id;
+  const typeTabs = isAdmin
+    ? FINANCE_TYPES
+    : FINANCE_TYPES.filter((item) => ['petty_cash', 'expense'].includes(item.value));
+  const { data: entries, isLoading } = useFinanceEntries(
+    user ? {
+      type: activeTab || undefined,
+      created_by: scopedCreatedBy,
+    } : null
+  );
+  const { data: stats } = useFinanceStats(user ? { created_by: scopedCreatedBy } : null);
   const createEntry = useCreateFinanceEntry();
 
   const handleCreate = async (data) => {
-    await createEntry.mutateAsync(data);
+    await createEntry.mutateAsync({ ...data, created_by: user?.id || null });
     setShowForm(false);
+  };
+
+  const escapeCsvValue = (value) => {
+    const stringValue = value == null ? '' : String(value);
+
+    if (!/[",\n]/.test(stringValue)) {
+      return stringValue;
+    }
+
+    return `"${stringValue.replace(/"/g, '""')}"`;
   };
 
   const handleExport = () => {
     if (!entries?.length) return;
     const headers = ['Date', 'Type', 'Description', 'Amount', 'Method', 'Client'];
-    const rows = entries.map(e => [e.entry_date, e.type, e.description, e.amount, e.payment_method, e.client?.name].join(','));
+    const rows = entries.map((entry) =>
+      [
+        entry.entry_date,
+        entry.type,
+        entry.description,
+        entry.amount,
+        entry.payment_method,
+        entry.client?.name,
+      ]
+        .map(escapeCsvValue)
+        .join(',')
+    );
     const csv = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -38,25 +70,46 @@ export default function FinancePage() {
     URL.revokeObjectURL(url);
   };
 
-  const tabs = [{ value: '', label: 'All' }, ...FINANCE_TYPES];
+  const tabs = [{ value: '', label: 'All' }, ...typeTabs];
+  const pageTitle = isAdmin ? 'Finance' : 'Petty Cash';
+  const pageDescription = isAdmin
+    ? 'Track payments, expenses, and revenue'
+    : 'Track your petty cash and expense entries';
+  const actionLabel = isAdmin ? 'Record Entry' : 'Add Expense';
+  const employeePettyCash = (stats?.entries || [])
+    .filter((entry) => entry.type === 'petty_cash')
+    .reduce((total, entry) => total + (entry.amount || 0), 0);
+  const statCards = isAdmin
+    ? [
+        { title: 'Total Income', value: formatCurrency(stats?.income || 0), icon: TrendingUp, color: 'success' },
+        { title: 'Total Expenses', value: formatCurrency(stats?.expenses || 0), icon: TrendingDown, color: 'danger' },
+        { title: 'Net Balance', value: formatCurrency(stats?.net || 0), icon: Wallet, color: 'primary' },
+      ]
+    : [
+        { title: 'Petty Cash', value: formatCurrency(employeePettyCash), icon: Wallet, color: 'primary' },
+        { title: 'Expenses', value: formatCurrency(stats?.expenses || 0), icon: TrendingDown, color: 'danger' },
+        { title: 'Entries Logged', value: entries?.length || 0, icon: DollarSign, color: 'success' },
+      ];
 
   return (
     <PageWrapper>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Finance</h1>
-          <p className="text-sm text-text-secondary mt-1">Track payments, expenses, and revenue</p>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">{pageTitle}</h1>
+          <p className="text-sm text-text-secondary mt-1">{pageDescription}</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" icon={Download} onClick={handleExport}>Export CSV</Button>
-          <Button icon={DollarSign} onClick={() => setShowForm(true)}>Record Entry</Button>
+          <Button variant="outline" icon={Download} onClick={handleExport} disabled={!entries?.length}>
+            Export CSV
+          </Button>
+          <Button icon={DollarSign} onClick={() => setShowForm(true)}>{actionLabel}</Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <StatCard title="Total Income" value={formatCurrency(stats?.income || 0)} icon={TrendingUp} color="success" index={0} />
-        <StatCard title="Total Expenses" value={formatCurrency(stats?.expenses || 0)} icon={TrendingDown} color="danger" index={1} />
-        <StatCard title="Net Balance" value={formatCurrency(stats?.net || 0)} icon={Wallet} color="primary" index={2} />
+        {statCards.map((card, index) => (
+          <StatCard key={card.title} {...card} index={index} />
+        ))}
       </div>
 
       <div className="mb-8">
@@ -80,8 +133,13 @@ export default function FinancePage() {
 
       <DayBook data={entries} loading={isLoading} />
 
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Record Finance Entry" size="lg">
-        <PaymentForm onSubmit={handleCreate} loading={createEntry.isPending} />
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={actionLabel} size="lg">
+        <PaymentForm
+          onSubmit={handleCreate}
+          loading={createEntry.isPending}
+          allowedTypes={typeTabs}
+          showClientField={isAdmin}
+        />
       </Modal>
     </PageWrapper>
   );

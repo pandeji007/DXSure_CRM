@@ -4,6 +4,7 @@ import { z } from 'zod';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { Plus, Trash2 } from 'lucide-react';
+import { toDateInputValue } from '../../lib/utils';
 
 const taskSchema = z.object({
   plan_date: z.string().min(1, 'Date is required'),
@@ -17,7 +18,7 @@ export default function DayPlanForm({ initialData, onSubmit, loading }) {
   const { register, handleSubmit, control, formState: { errors } } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      plan_date: initialData?.plan_date || new Date().toISOString().split('T')[0],
+      plan_date: initialData?.plan_date || toDateInputValue(),
       tasks: initialData?.tasks || [{ title: '', completed: false }],
     },
   });

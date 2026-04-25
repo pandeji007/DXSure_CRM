@@ -97,6 +97,7 @@ export const ROLES = [
 ];
 
 export const STATUS_COLORS = {
+  open: 'warning',
   new: 'info',
   contacted: 'warning',
   in_progress: 'warning',

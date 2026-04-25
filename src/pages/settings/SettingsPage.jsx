@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Settings, User, Lock, Palette } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Settings, User, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageWrapper from '../../components/layout/PageWrapper';
 import Card from '../../components/ui/Card';
@@ -23,6 +23,13 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
   ];
+
+  useEffect(() => {
+    setProfileData({
+      name: profile?.name || '',
+      phone: profile?.phone || '',
+    });
+  }, [profile?.name, profile?.phone]);
 
   const handleProfileUpdate = () => {
     updateProfile.mutate(profileData);

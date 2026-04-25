@@ -7,6 +7,7 @@ import Textarea from '../ui/Textarea';
 import Button from '../ui/Button';
 import { LEAD_STATUSES, LEAD_PRIORITIES, LEAD_SOURCES } from '../../constants';
 import { useEmployees } from '../../hooks/useEmployees';
+import { useAuth } from '../../hooks/useAuth';
 
 const leadSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -24,6 +25,7 @@ const leadSchema = z.object({
 });
 
 export default function LeadForm({ initialData, onSubmit, loading }) {
+  const { user, isAdmin } = useAuth();
   const { data: employees } = useEmployees();
 
   const {
@@ -53,7 +55,7 @@ export default function LeadForm({ initialData, onSubmit, loading }) {
       ...data,
       value: data.value ? parseFloat(data.value) : null,
       expected_close_date: data.expected_close_date || null,
-      assigned_to: data.assigned_to || null,
+      assigned_to: isAdmin ? data.assigned_to || null : user?.id || null,
     });
   };
 
@@ -71,7 +73,9 @@ export default function LeadForm({ initialData, onSubmit, loading }) {
         <Select label="Status" options={LEAD_STATUSES} {...register('status')} />
         <Select label="Priority" options={LEAD_PRIORITIES} {...register('priority')} />
         <Select label="Source" options={LEAD_SOURCES} {...register('source')} />
-        <Select label="Assigned To" options={employeeOptions} placeholder="Select employee..." {...register('assigned_to')} />
+        {isAdmin && (
+          <Select label="Assigned To" options={employeeOptions} placeholder="Select employee..." {...register('assigned_to')} />
+        )}
         <Input label="Expected Close Date" type="date" {...register('expected_close_date')} />
       </div>
       <Textarea label="Notes" placeholder="Additional details..." rows={3} {...register('notes')} />

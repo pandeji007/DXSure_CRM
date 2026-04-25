@@ -118,6 +118,7 @@ export default function TicketDetailPage() {
             <h3 className="text-sm font-semibold text-text-primary mb-3">Details</h3>
             <div className="space-y-3">
               <div><p className="text-xs text-text-muted">Assigned To</p><p className="text-sm text-text-primary">{ticket.assigned_to_profile?.name || '—'}</p></div>
+              <div><p className="text-xs text-text-muted">Client</p><p className="text-sm text-text-primary">{ticket.client?.name || '—'}</p></div>
               <div><p className="text-xs text-text-muted">Due Date</p><p className="text-sm text-text-primary">{formatDate(ticket.due_date)}</p></div>
               <div><p className="text-xs text-text-muted">Created</p><p className="text-sm text-text-primary">{formatDate(ticket.created_at)}</p></div>
               <div>

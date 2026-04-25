@@ -1,30 +1,33 @@
 import { useState } from 'react';
-import { PhoneCall, Search, CheckCircle } from 'lucide-react';
+import { PhoneCall, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PageWrapper from '../../components/layout/PageWrapper';
 import FollowUpForm from '../../components/followups/FollowUpForm';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import { useFollowUps, useCreateFollowUp, useUpdateFollowUp } from '../../hooks/useFollowUps';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDateTime } from '../../lib/utils';
-import { STATUS_COLORS, FOLLOWUP_STATUSES } from '../../constants';
+import { STATUS_COLORS } from '../../constants';
 import { cn } from '../../lib/utils';
 
 export default function FollowUpsPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState('scheduled');
+  const currentUserId = user?.id || null;
 
-  const { data: followups, isLoading } = useFollowUps({ status: filter || undefined });
+  const { data: followups, isLoading } = useFollowUps({
+    status: filter || undefined,
+    user_id: isAdmin ? undefined : currentUserId,
+  });
   const createFollowUp = useCreateFollowUp();
   const updateFollowUp = useUpdateFollowUp();
 
   const handleCreate = async (data) => {
-    await createFollowUp.mutateAsync({ ...data, user_id: user.id });
+    await createFollowUp.mutateAsync({ ...data, user_id: currentUserId });
     setShowForm(false);
   };
 

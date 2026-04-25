@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 const hasPlaceholderConfig =
   !supabaseUrl ||
   !supabaseAnonKey ||
@@ -9,13 +10,13 @@ const hasPlaceholderConfig =
   supabaseUrl.includes('your-supabase-url') ||
   supabaseAnonKey.includes('your-anon-key');
 
-const mockModeMessage =
+export const supabaseConfigMessage =
   'Supabase credentials are not configured correctly. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env with your Supabase project values.';
 
 export const isSupabaseConfigured = !hasPlaceholderConfig;
 
 function createMockError() {
-  return new Error(mockModeMessage);
+  return new Error(supabaseConfigMessage);
 }
 
 function createMockResult(operation, payload, expectsSingle) {
@@ -82,7 +83,7 @@ function createMockQueryBuilder() {
           };
         }
 
-        if (prop === 'single') {
+        if (prop === 'single' || prop === 'maybeSingle') {
           return () => {
             expectsSingle = true;
             return proxy;
@@ -115,7 +116,7 @@ function createMockQueryBuilder() {
 
 function createMockSupabaseClient() {
   if (import.meta.env.DEV) {
-    console.warn(mockModeMessage);
+    console.warn(supabaseConfigMessage);
   }
 
   return {
@@ -129,10 +130,36 @@ function createMockSupabaseClient() {
           error: null,
         };
       },
+      async getSession() {
+        return {
+          data: { session: null },
+          error: null,
+        };
+      },
+      onAuthStateChange() {
+        return {
+          data: {
+            subscription: {
+              unsubscribe() {},
+            },
+          },
+        };
+      },
+      async signInWithPassword() {
+        return {
+          data: { user: null, session: null },
+          error: createMockError(),
+        };
+      },
       async signUp() {
         return {
           data: { user: null, session: null },
           error: createMockError(),
+        };
+      },
+      async signOut() {
+        return {
+          error: null,
         };
       },
       async updateUser() {
@@ -145,6 +172,25 @@ function createMockSupabaseClient() {
   };
 }
 
+function createSupabaseBrowserClient(options) {
+  return createClient(supabaseUrl, supabaseAnonKey, options);
+}
+
+export function createEphemeralSupabaseClient() {
+  if (!isSupabaseConfigured) {
+    return createMockSupabaseClient();
+  }
+
+  return createSupabaseBrowserClient({
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'dxsure-crm-ephemeral-auth',
+    },
+  });
+}
+
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createSupabaseBrowserClient()
   : createMockSupabaseClient();

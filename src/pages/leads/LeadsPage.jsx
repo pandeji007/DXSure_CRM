@@ -14,16 +14,22 @@ import { cn } from '../../lib/utils';
 
 export default function LeadsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [view, setView] = useState('table');
 
-  const { data: leads, isLoading } = useLeads({ search });
+  const { data: leads, isLoading } = useLeads({
+    search,
+    assigned_to: isAdmin ? undefined : user?.id,
+  });
   const createLead = useCreateLead();
 
   const handleCreate = async (data) => {
-    await createLead.mutateAsync(data);
+    await createLead.mutateAsync({
+      ...data,
+      assigned_to: isAdmin ? data.assigned_to || null : profile?.id || user?.id || null,
+    });
     setShowForm(false);
   };
 

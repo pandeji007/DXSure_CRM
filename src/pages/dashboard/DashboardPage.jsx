@@ -1,4 +1,4 @@
-import { Users, Target, Ticket, DollarSign, PhoneCall, UserCheck, ClipboardList, BarChart3 } from 'lucide-react';
+import { Users, Target, Ticket, DollarSign, PhoneCall, UserCheck } from 'lucide-react';
 import PageWrapper from '../../components/layout/PageWrapper';
 import StatCard from '../../components/dashboard/StatCard';
 import RecentActivity from '../../components/dashboard/RecentActivity';
@@ -13,7 +13,7 @@ import { useTickets } from '../../hooks/useTickets';
 import { useFollowUps } from '../../hooks/useFollowUps';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useFinanceStats } from '../../hooks/useFinance';
-import { formatCurrency, formatDate, formatRelative } from '../../lib/utils';
+import { formatCurrency, formatDate, isSameLocalDate } from '../../lib/utils';
 import { STATUS_COLORS } from '../../constants';
 import { motion } from 'framer-motion';
 
@@ -22,23 +22,21 @@ export default function DashboardPage() {
   const { data: clients } = useClients();
   const { data: leads } = useLeads();
   const { data: tickets } = useTickets();
-  const { data: followups } = useFollowUps();
+  const { data: followups } = useFollowUps({ user_id: isAdmin ? undefined : profile?.id });
   const { data: employees } = useEmployees();
-  const { data: financeStats } = useFinanceStats();
+  const { data: financeStats } = useFinanceStats({ created_by: isAdmin ? undefined : profile?.id });
 
   const activeLeads = leads?.filter(l => !['converted', 'lost'].includes(l.status))?.length || 0;
   const openTickets = tickets?.filter(t => t.status !== 'completed' && t.status !== 'cancelled')?.length || 0;
   const pendingFollowUps = followups?.filter(f => f.status === 'scheduled')?.length || 0;
-  const todayFollowUps = followups?.filter(f => {
-    const today = new Date().toISOString().split('T')[0];
-    return f.scheduled_at?.startsWith(today) && f.status === 'scheduled';
-  }) || [];
+  const todayFollowUps =
+    followups?.filter((followUp) => followUp.status === 'scheduled' && isSameLocalDate(followUp.scheduled_at)) || [];
 
   const adminStats = [
     { title: 'Total Clients', value: clients?.length || 0, icon: Users, color: 'primary' },
     { title: 'Active Leads', value: activeLeads, icon: Target, color: 'secondary' },
     { title: 'Open Tickets', value: openTickets, icon: Ticket, color: 'warning' },
-    { title: 'Monthly Revenue', value: formatCurrency(financeStats?.income || 0), icon: DollarSign, color: 'success' },
+    { title: 'Total Revenue', value: formatCurrency(financeStats?.income || 0), icon: DollarSign, color: 'success' },
     { title: 'Pending Follow-Ups', value: pendingFollowUps, icon: PhoneCall, color: 'danger' },
     { title: 'Active Employees', value: employees?.length || 0, icon: UserCheck, color: 'primary' },
   ];

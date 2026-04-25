@@ -19,7 +19,11 @@ export default function TicketsPage() {
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState('');
 
-  const { data: tickets, isLoading } = useTickets({ search, status: statusTab || undefined });
+  const { data: tickets, isLoading } = useTickets({
+    search,
+    status: statusTab || undefined,
+    assigned_to: isAdmin ? undefined : user?.id,
+  });
   const createTicket = useCreateTicket();
 
   const handleCreate = async (data) => {
