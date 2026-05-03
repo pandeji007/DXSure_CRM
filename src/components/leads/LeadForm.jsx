@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import Button from '../ui/Button';
 import { LEAD_STATUSES, LEAD_PRIORITIES, LEAD_SOURCES } from '../../constants';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useAuth } from '../../hooks/useAuth';
+import { normalizeLeadSource } from '../../lib/leads';
 
 const leadSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -31,6 +33,7 @@ export default function LeadForm({ initialData, onSubmit, loading }) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(leadSchema),
@@ -42,13 +45,30 @@ export default function LeadForm({ initialData, onSubmit, loading }) {
       company: initialData?.company || '',
       status: initialData?.status || 'new',
       priority: initialData?.priority || 'medium',
-      source: initialData?.source || '',
+      source: normalizeLeadSource(initialData?.source, { fallback: 'other' }) || '',
       value: initialData?.value?.toString() || '',
       expected_close_date: initialData?.expected_close_date?.split('T')[0] || '',
       assigned_to: initialData?.assigned_to || '',
       notes: initialData?.notes || '',
     },
   });
+
+  useEffect(() => {
+    reset({
+      title: initialData?.title || '',
+      contact_name: initialData?.contact_name || '',
+      contact_email: initialData?.contact_email || '',
+      contact_phone: initialData?.contact_phone || '',
+      company: initialData?.company || '',
+      status: initialData?.status || 'new',
+      priority: initialData?.priority || 'medium',
+      source: normalizeLeadSource(initialData?.source, { fallback: 'other' }) || '',
+      value: initialData?.value?.toString() || '',
+      expected_close_date: initialData?.expected_close_date?.split('T')[0] || '',
+      assigned_to: initialData?.assigned_to || '',
+      notes: initialData?.notes || '',
+    });
+  }, [initialData, reset]);
 
   const onFormSubmit = (data) => {
     onSubmit({

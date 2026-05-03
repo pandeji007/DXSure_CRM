@@ -2,6 +2,7 @@ import Table from '../ui/Table';
 import Badge from '../ui/Badge';
 import { formatDate, formatCurrency } from '../../lib/utils';
 import { STATUS_COLORS } from '../../constants';
+import { formatLeadSource } from '../../lib/leads';
 
 const columns = [
   {
@@ -46,7 +47,7 @@ const columns = [
     key: 'source',
     label: 'Source',
     render: (value) => (
-      <span className="text-text-secondary text-xs capitalize">{value?.replace(/_/g, ' ') || '—'}</span>
+      <span className="text-text-secondary text-xs">{formatLeadSource(value)}</span>
     ),
   },
   {

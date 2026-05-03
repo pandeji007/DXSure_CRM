@@ -11,7 +11,14 @@ import { toDateInputValue } from '../../lib/utils';
 
 const paymentSchema = z.object({
   type: z.string().min(1, 'Type is required'),
-  amount: z.string().min(1, 'Amount is required'),
+  amount: z
+    .string()
+    .trim()
+    .min(1, 'Amount is required')
+    .refine((value) => {
+      const numericAmount = Number(value);
+      return Number.isFinite(numericAmount) && numericAmount > 0;
+    }, 'Amount must be greater than 0'),
   entry_date: z.string().min(1, 'Date is required'),
   payment_method: z.string().optional(),
   client_id: z.string().optional(),
@@ -40,7 +47,7 @@ export default function PaymentForm({ initialData, onSubmit, loading, allowedTyp
   const onFormSubmit = (data) => {
     onSubmit({
       ...data,
-      amount: parseFloat(data.amount),
+      amount: Math.abs(parseFloat(data.amount)),
       payment_method: data.payment_method || null,
       client_id: data.client_id || null,
       description: data.description || null,

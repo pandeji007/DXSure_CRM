@@ -21,7 +21,10 @@ export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-  const { data: ticket, isLoading } = useTicket(id);
+  const { data: ticket, isLoading } = useTicket(id, {
+    assigned_to: isAdmin ? undefined : user?.id,
+    requireAssignedTo: !isAdmin,
+  });
   const updateTicket = useUpdateTicket();
   const addComment = useAddTicketComment();
   const [editing, setEditing] = useState(false);
@@ -41,7 +44,11 @@ export default function TicketDetailPage() {
   };
 
   const handleStatusChange = async (newStatus) => {
-    await updateTicket.mutateAsync({ id: ticket.id, status: newStatus });
+    await updateTicket.mutateAsync({
+      id: ticket.id,
+      status: newStatus,
+      completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
+    });
   };
 
   const handleComment = async () => {
@@ -118,6 +125,7 @@ export default function TicketDetailPage() {
             <h3 className="text-sm font-semibold text-text-primary mb-3">Details</h3>
             <div className="space-y-3">
               <div><p className="text-xs text-text-muted">Assigned To</p><p className="text-sm text-text-primary">{ticket.assigned_to_profile?.name || '—'}</p></div>
+              <div><p className="text-xs text-text-muted">Created By</p><p className="text-sm text-text-primary">{ticket.created_by_profile?.name || '—'}</p></div>
               <div><p className="text-xs text-text-muted">Client</p><p className="text-sm text-text-primary">{ticket.client?.name || '—'}</p></div>
               <div><p className="text-xs text-text-muted">Due Date</p><p className="text-sm text-text-primary">{formatDate(ticket.due_date)}</p></div>
               <div><p className="text-xs text-text-muted">Created</p><p className="text-sm text-text-primary">{formatDate(ticket.created_at)}</p></div>

@@ -1,3 +1,5 @@
+import { LEAD_SOURCE_OPTIONS } from '../lib/leads';
+
 export const LEAD_STATUSES = [
   { value: 'new', label: 'New', color: 'bg-blue-500' },
   { value: 'contacted', label: 'Contacted', color: 'bg-yellow-500' },
@@ -14,15 +16,7 @@ export const LEAD_PRIORITIES = [
   { value: 'urgent', label: 'Urgent' },
 ];
 
-export const LEAD_SOURCES = [
-  { value: 'website', label: 'Website' },
-  { value: 'referral', label: 'Referral' },
-  { value: 'social_media', label: 'Social Media' },
-  { value: 'cold_call', label: 'Cold Call' },
-  { value: 'email', label: 'Email Campaign' },
-  { value: 'event', label: 'Event' },
-  { value: 'other', label: 'Other' },
-];
+export const LEAD_SOURCES = LEAD_SOURCE_OPTIONS;
 
 export const CLIENT_STATUSES = [
   { value: 'active', label: 'Active' },

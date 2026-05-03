@@ -1,6 +1,7 @@
 import Table from '../ui/Table';
 import Badge from '../ui/Badge';
 import { formatDate, formatCurrency } from '../../lib/utils';
+import { getFinanceDirection } from '../../lib/finance';
 
 const typeColors = {
   payment: 'success',
@@ -35,9 +36,24 @@ const columns = [
     key: 'amount',
     label: 'Amount',
     sortable: true,
-    render: (value, row) => (
-      <span className={row.type === 'payment' ? 'text-success font-medium' : 'text-danger font-medium'}>
-        {row.type === 'payment' ? '+' : '-'}{formatCurrency(value)}
+    render: (value, row) => {
+      const direction = row.direction || getFinanceDirection(row.type);
+      const isInflow = direction === 'inflow';
+
+      return (
+        <span className={isInflow ? 'text-success font-medium' : 'text-danger font-medium'}>
+          {isInflow ? '+' : '-'}{formatCurrency(value).replace('-', '')}
+        </span>
+      );
+    },
+  },
+  {
+    key: 'signed_amount',
+    label: 'Impact',
+    sortable: true,
+    render: (value) => (
+      <span className={value >= 0 ? 'text-success text-xs font-medium' : 'text-danger text-xs font-medium'}>
+        {formatCurrency(value)}
       </span>
     ),
   },

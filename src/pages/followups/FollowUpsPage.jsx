@@ -18,21 +18,30 @@ export default function FollowUpsPage() {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState('scheduled');
   const currentUserId = user?.id || null;
+  const canManageFollowUps = Boolean(currentUserId);
 
   const { data: followups, isLoading } = useFollowUps({
     status: filter || undefined,
-    user_id: isAdmin ? undefined : currentUserId,
+    created_by: isAdmin ? undefined : currentUserId,
   });
   const createFollowUp = useCreateFollowUp();
   const updateFollowUp = useUpdateFollowUp();
 
   const handleCreate = async (data) => {
-    await createFollowUp.mutateAsync({ ...data, user_id: currentUserId });
+    if (!currentUserId) {
+      throw new Error('You must be logged in to schedule a follow-up.');
+    }
+
+    await createFollowUp.mutateAsync({ ...data, created_by: currentUserId });
     setShowForm(false);
   };
 
   const handleComplete = async (id) => {
-    await updateFollowUp.mutateAsync({ id, status: 'completed' });
+    await updateFollowUp.mutateAsync({
+      id,
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    });
   };
 
   const filters = [
@@ -49,7 +58,9 @@ export default function FollowUpsPage() {
           <h1 className="text-2xl font-bold text-text-primary tracking-tight">Follow-Ups</h1>
           <p className="text-sm text-text-secondary mt-1">Schedule and track your follow-ups</p>
         </div>
-        <Button icon={PhoneCall} onClick={() => setShowForm(true)}>Schedule Follow-Up</Button>
+        <Button icon={PhoneCall} onClick={() => setShowForm(true)} disabled={!canManageFollowUps}>
+          Schedule Follow-Up
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">
@@ -78,7 +89,9 @@ export default function FollowUpsPage() {
           <PhoneCall className="w-12 h-12 text-text-muted mx-auto mb-4" />
           <h3 className="text-base font-semibold text-text-primary mb-1">No follow-ups</h3>
           <p className="text-sm text-text-secondary mb-4">Schedule follow-ups to stay on top of your leads and clients.</p>
-          <Button icon={PhoneCall} onClick={() => setShowForm(true)} size="sm">Schedule Now</Button>
+          <Button icon={PhoneCall} onClick={() => setShowForm(true)} size="sm" disabled={!canManageFollowUps}>
+            Schedule Now
+          </Button>
         </Card>
       ) : (
         <div className="space-y-3">

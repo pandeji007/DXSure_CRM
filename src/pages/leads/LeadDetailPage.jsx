@@ -12,11 +12,17 @@ import LeadForm from '../../components/leads/LeadForm';
 import { useLead, useUpdateLead, useDeleteLead, useConvertLead } from '../../hooks/useLeads';
 import { formatDate, formatCurrency } from '../../lib/utils';
 import { STATUS_COLORS } from '../../constants';
+import { useAuth } from '../../hooks/useAuth';
+import { formatLeadSource } from '../../lib/leads';
 
 export default function LeadDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: lead, isLoading } = useLead(id);
+  const { user, isAdmin } = useAuth();
+  const { data: lead, isLoading } = useLead(id, {
+    assigned_to: isAdmin ? undefined : user?.id,
+    requireAssignedTo: !isAdmin,
+  });
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
   const convertLead = useConvertLead();
@@ -133,12 +139,22 @@ export default function LeadDetailPage() {
             <div className="space-y-3">
               <div>
                 <p className="text-xs text-text-muted">Source</p>
-                <p className="text-sm text-text-primary capitalize">{lead.source?.replace(/_/g, ' ') || '—'}</p>
+                <p className="text-sm text-text-primary">{formatLeadSource(lead.source)}</p>
               </div>
               <div>
                 <p className="text-xs text-text-muted">Assigned To</p>
                 <p className="text-sm text-text-primary">{lead.assigned_to_profile?.name || '—'}</p>
               </div>
+              <div>
+                <p className="text-xs text-text-muted">Created By</p>
+                <p className="text-sm text-text-primary">{lead.created_by_profile?.name || '—'}</p>
+              </div>
+              {lead.converted_client && (
+                <div>
+                  <p className="text-xs text-text-muted">Converted Client</p>
+                  <p className="text-sm text-text-primary">{lead.converted_client.name}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-text-muted">Created</p>
                 <p className="text-sm text-text-primary">{formatDate(lead.created_at)}</p>

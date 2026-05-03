@@ -5,7 +5,8 @@ import { cn } from '../../lib/utils';
 
 export default function StatCard({ title, value, icon: Icon, color = 'primary', trend, index = 0 }) {
   const [displayValue, setDisplayValue] = useState(0);
-  const numericValue = typeof value === 'number' ? value : parseInt(value) || 0;
+  const shouldRenderRawValue = typeof value === 'string';
+  const numericValue = typeof value === 'number' ? value : 0;
 
   useEffect(() => {
     if (numericValue === 0) { setDisplayValue(0); return; }
@@ -48,9 +49,7 @@ export default function StatCard({ title, value, icon: Icon, color = 'primary', 
               {title}
             </p>
             <p className="text-3xl font-bold text-text-primary tracking-tight">
-              {typeof value === 'string' && value.startsWith('₹')
-                ? value
-                : displayValue.toLocaleString('en-IN')}
+              {shouldRenderRawValue ? value : displayValue.toLocaleString('en-IN')}
             </p>
             {trend && (
               <p className={cn('text-xs mt-2 font-medium', trend > 0 ? 'text-success' : 'text-danger')}>

@@ -27,7 +27,7 @@ export default function TicketsPage() {
   const createTicket = useCreateTicket();
 
   const handleCreate = async (data) => {
-    await createTicket.mutateAsync({ ...data, user_id: user?.id || null });
+    await createTicket.mutateAsync({ ...data, created_by: user?.id || null });
     setShowForm(false);
   };
 

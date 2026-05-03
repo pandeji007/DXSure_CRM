@@ -8,9 +8,88 @@ import {
 } from '../lib/queryCache';
 import toast from 'react-hot-toast';
 import { logActivity } from './useAuth';
+import { normalizeLeadSource } from '../lib/leads';
 
 const LEADS_QUERY_KEY = 'leads';
-const LEAD_SELECT = '*, assigned_to_profile:profiles!leads_assigned_to_fkey(name, email)';
+const LEAD_SELECT = [
+  '*',
+  'assigned_to_profile:profiles!leads_assigned_to_fkey(name, email)',
+  'created_by_profile:profiles!leads_created_by_fkey(name, email)',
+  'converted_client:clients!leads_converted_client_id_fkey(name)',
+].join(', ');
+
+function normalizeLead(lead) {
+  if (!lead) {
+    return lead;
+  }
+
+  return {
+    ...lead,
+    source: normalizeLeadSource(lead.source, {
+      fallback: lead.source ? 'other' : null,
+    }),
+    status: lead.status || 'new',
+    priority: lead.priority || 'medium',
+    created_by: lead.created_by ?? null,
+    converted_client_id: lead.converted_client_id ?? null,
+  };
+}
+
+function normalizeLeadPayload(payload = {}) {
+  const nextPayload = {
+    ...payload,
+  };
+
+  const createdBy = payload.created_by ?? payload.user_id;
+  if (createdBy !== undefined) {
+    nextPayload.created_by = createdBy;
+  }
+
+  delete nextPayload.user_id;
+
+  [
+    'title',
+    'contact_name',
+    'contact_email',
+    'contact_phone',
+    'company',
+    'status',
+    'priority',
+    'notes',
+  ].forEach((field) => {
+    if (typeof nextPayload[field] === 'string') {
+      const normalizedValue = nextPayload[field].trim();
+      nextPayload[field] = normalizedValue || null;
+    }
+  });
+
+  nextPayload.source = normalizeLeadSource(nextPayload.source, { fallback: 'other' });
+
+  if (nextPayload.value != null && nextPayload.value !== '') {
+    const numericValue = Number(nextPayload.value);
+    nextPayload.value = Number.isFinite(numericValue) ? numericValue : null;
+  } else {
+    nextPayload.value = null;
+  }
+
+  if (nextPayload.expected_close_date === '') {
+    nextPayload.expected_close_date = null;
+  }
+
+  if (nextPayload.assigned_to === '') {
+    nextPayload.assigned_to = null;
+  }
+
+  if (!nextPayload.status) {
+    nextPayload.status = 'new';
+  }
+
+  if (!nextPayload.priority) {
+    nextPayload.priority = 'medium';
+  }
+
+  return nextPayload;
+}
 
 function doesLeadMatchFilters(lead, filters = {}) {
   if (!lead) {
@@ -31,7 +110,7 @@ function doesLeadMatchFilters(lead, filters = {}) {
 
   if (filters.search) {
     const searchTerm = filters.search.toLowerCase();
-    const haystack = [lead.title, lead.contact_name, lead.company]
+    const haystack = [lead.title, lead.contact_name, lead.contact_email, lead.company]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
@@ -52,23 +131,38 @@ export function useLeads(filters = {}) {
       if (filters.status) query = query.eq('status', filters.status);
       if (filters.priority) query = query.eq('priority', filters.priority);
       if (filters.assigned_to) query = query.eq('assigned_to', filters.assigned_to);
-      if (filters.search) query = query.or(`title.ilike.%${filters.search}%,contact_name.ilike.%${filters.search}%`);
+      if (filters.search) {
+        query = query.or(
+          [
+            `title.ilike.%${filters.search}%`,
+            `contact_name.ilike.%${filters.search}%`,
+            `contact_email.ilike.%${filters.search}%`,
+            `company.ilike.%${filters.search}%`,
+          ].join(',')
+        );
+      }
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data || []).map(normalizeLead);
     },
   });
 }
 
-export function useLead(id) {
+export function useLead(id, filters = {}) {
   return useQuery({
-    queryKey: [LEADS_QUERY_KEY, id],
+    queryKey: [LEADS_QUERY_KEY, id, filters],
     queryFn: async () => {
-      const { data, error } = await supabase.from('leads').select(LEAD_SELECT).eq('id', id).single();
+      let query = supabase.from('leads').select(LEAD_SELECT).eq('id', id);
+
+      if (filters.assigned_to) {
+        query = query.eq('assigned_to', filters.assigned_to);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
-      return data;
+      return normalizeLead(data);
     },
-    enabled: !!id,
+    enabled: !!id && (!filters.requireAssignedTo || !!filters.assigned_to),
   });
 }
 
@@ -76,9 +170,13 @@ export function useCreateLead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (lead) => {
-      const { data, error } = await supabase.from('leads').insert(lead).select(LEAD_SELECT).single();
+      const { data, error } = await supabase
+        .from('leads')
+        .insert(normalizeLeadPayload(lead))
+        .select(LEAD_SELECT)
+        .single();
       if (error) throw error;
-      return data;
+      return normalizeLead(data);
     },
     onSuccess: async (data) => {
       upsertEntityInListQueries({
@@ -101,9 +199,14 @@ export function useUpdateLead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }) => {
-      const { data, error } = await supabase.from('leads').update(updates).eq('id', id).select(LEAD_SELECT).single();
+      const { data, error } = await supabase
+        .from('leads')
+        .update(normalizeLeadPayload(updates))
+        .eq('id', id)
+        .select(LEAD_SELECT)
+        .single();
       if (error) throw error;
-      return data;
+      return normalizeLead(data);
     },
     onSuccess: async (data) => {
       upsertEntityInListQueries({
@@ -144,38 +247,56 @@ export function useConvertLead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (leadId) => {
-      const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).single();
+      const { data: lead, error: leadError } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .maybeSingle();
+      if (leadError) throw leadError;
       if (!lead) throw new Error('Lead not found');
+      if (lead.status === 'converted' && lead.converted_client_id) {
+        throw new Error('Lead is already converted');
+      }
 
-      const { data: client, error: clientErr } = await supabase.from('clients').insert({
-        name: lead.contact_name,
-        email: lead.contact_email,
-        phone: lead.contact_phone,
-        company: lead.company,
-        status: 'active',
-        source: lead.source,
-        notes: `Converted from lead: ${lead.title}`,
-      }).select().single();
+      const normalizedLead = normalizeLead(lead);
+      const { data: client, error: clientErr } = await supabase
+        .from('clients')
+        .insert({
+          name: normalizedLead.contact_name,
+          email: normalizedLead.contact_email,
+          phone: normalizedLead.contact_phone,
+          company: normalizedLead.company,
+          status: 'active',
+          source: normalizeLeadSource(normalizedLead.source, { fallback: null }),
+          notes: `Converted from lead: ${normalizedLead.title}`,
+          assigned_to: normalizedLead.assigned_to ?? null,
+          created_by: normalizedLead.created_by ?? normalizedLead.assigned_to ?? null,
+        })
+        .select()
+        .single();
       if (clientErr) throw clientErr;
 
-      const { error: leadUpdateError } = await supabase
+      const { data: convertedLead, error: leadUpdateError } = await supabase
         .from('leads')
-        .update({ status: 'converted' })
-        .eq('id', leadId);
+        .update({
+          status: 'converted',
+          converted_client_id: client.id,
+        })
+        .eq('id', leadId)
+        .select(LEAD_SELECT)
+        .single();
       if (leadUpdateError) throw leadUpdateError;
-      return { lead, client };
+      return { lead: normalizeLead(convertedLead), client };
     },
     onSuccess: async ({ lead, client }) => {
-      const convertedLead = { ...lead, status: 'converted' };
-
       upsertEntityInListQueries({
         queryClient: qc,
         baseKey: LEADS_QUERY_KEY,
-        entity: convertedLead,
+        entity: lead,
         matchesFilters: doesLeadMatchFilters,
         sortItems: sortByDateField('created_at'),
       });
-      mergeEntityDetailQuery(qc, LEADS_QUERY_KEY, convertedLead);
+      mergeEntityDetailQuery(qc, LEADS_QUERY_KEY, lead);
 
       await Promise.all([
         qc.invalidateQueries({ queryKey: [LEADS_QUERY_KEY], refetchType: 'active' }),

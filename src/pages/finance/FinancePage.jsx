@@ -47,13 +47,14 @@ export default function FinancePage() {
 
   const handleExport = () => {
     if (!entries?.length) return;
-    const headers = ['Date', 'Type', 'Description', 'Amount', 'Method', 'Client'];
+    const headers = ['Date', 'Type', 'Description', 'Amount', 'Impact', 'Method', 'Client'];
     const rows = entries.map((entry) =>
       [
         entry.entry_date,
         entry.type,
         entry.description,
         entry.amount,
+        entry.signed_amount,
         entry.payment_method,
         entry.client?.name,
       ]
@@ -74,20 +75,18 @@ export default function FinancePage() {
   const pageTitle = isAdmin ? 'Finance' : 'Petty Cash';
   const pageDescription = isAdmin
     ? 'Track payments, expenses, and revenue'
-    : 'Track your petty cash and expense entries';
-  const actionLabel = isAdmin ? 'Record Entry' : 'Add Expense';
-  const employeePettyCash = (stats?.entries || [])
-    .filter((entry) => entry.type === 'petty_cash')
-    .reduce((total, entry) => total + (entry.amount || 0), 0);
+    : 'Track incoming petty cash and outgoing expenses';
+  const actionLabel = isAdmin ? 'Record Entry' : 'Record Cash Entry';
   const statCards = isAdmin
     ? [
-        { title: 'Total Income', value: formatCurrency(stats?.income || 0), icon: TrendingUp, color: 'success' },
-        { title: 'Total Expenses', value: formatCurrency(stats?.expenses || 0), icon: TrendingDown, color: 'danger' },
-        { title: 'Net Balance', value: formatCurrency(stats?.net || 0), icon: Wallet, color: 'primary' },
+        { title: 'Total Inflow', value: formatCurrency(stats?.income || 0), icon: TrendingUp, color: 'success' },
+        { title: 'Total Outflow', value: formatCurrency(stats?.expenses || 0), icon: TrendingDown, color: 'danger' },
+        { title: 'Net Movement', value: formatCurrency(stats?.net || 0), icon: Wallet, color: 'primary' },
       ]
     : [
-        { title: 'Petty Cash', value: formatCurrency(employeePettyCash), icon: Wallet, color: 'primary' },
-        { title: 'Expenses', value: formatCurrency(stats?.expenses || 0), icon: TrendingDown, color: 'danger' },
+        { title: 'Cash Added', value: formatCurrency(stats?.income || 0), icon: Wallet, color: 'primary' },
+        { title: 'Cash Spent', value: formatCurrency(stats?.expenses || 0), icon: TrendingDown, color: 'danger' },
+        { title: 'Net Movement', value: formatCurrency(stats?.net || 0), icon: TrendingUp, color: stats?.net >= 0 ? 'success' : 'danger' },
         { title: 'Entries Logged', value: entries?.length || 0, icon: DollarSign, color: 'success' },
       ];
 

@@ -56,7 +56,7 @@ export default function FollowUpForm({ initialData, onSubmit, loading }) {
   const clientOptions = (clients || []).map((c) => ({ value: c.id, label: c.name }));
   const leadOptions = (leads || []).filter(l => l.status !== 'converted' && l.status !== 'lost').map((l) => ({ value: l.id, label: `${l.title} (${l.contact_name})` }));
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
     resolver: zodResolver(followUpSchema),
     defaultValues: {
       type: initialData?.type || '',
@@ -76,6 +76,11 @@ export default function FollowUpForm({ initialData, onSubmit, loading }) {
     });
   };
 
+  const clientId = watch('client_id');
+  const leadId = watch('lead_id');
+  const clientField = register('client_id');
+  const leadField = register('lead_id');
+
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -86,16 +91,33 @@ export default function FollowUpForm({ initialData, onSubmit, loading }) {
           options={clientOptions}
           placeholder="Select client..."
           error={errors.client_id?.message}
-          {...register('client_id')}
+          {...clientField}
+          onChange={(event) => {
+            clientField.onChange(event);
+            if (event.target.value) {
+              setValue('lead_id', '', { shouldValidate: true });
+            }
+          }}
+          disabled={Boolean(leadId)}
         />
         <Select
           label="Lead"
           options={leadOptions}
           placeholder="Select lead..."
           error={errors.lead_id?.message}
-          {...register('lead_id')}
+          {...leadField}
+          onChange={(event) => {
+            leadField.onChange(event);
+            if (event.target.value) {
+              setValue('client_id', '', { shouldValidate: true });
+            }
+          }}
+          disabled={Boolean(clientId)}
         />
       </div>
+      <p className="text-xs text-text-muted">
+        Link the follow-up to either one client or one lead.
+      </p>
       <Textarea label="Notes" placeholder="Follow-up details..." rows={3} {...register('notes')} />
       <div className="flex justify-end gap-3 pt-2">
         <Button type="submit" loading={loading}>{initialData ? 'Update' : 'Schedule Follow-Up'}</Button>

@@ -29,6 +29,7 @@ export default function LeadsPage() {
     await createLead.mutateAsync({
       ...data,
       assigned_to: isAdmin ? data.assigned_to || null : profile?.id || user?.id || null,
+      created_by: user?.id || null,
     });
     setShowForm(false);
   };

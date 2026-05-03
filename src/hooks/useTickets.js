@@ -11,7 +11,7 @@ import { logActivity } from './useAuth';
 
 const TICKETS_QUERY_KEY = 'tickets';
 const TICKET_LIST_SELECT =
-  '*, assigned_to_profile:profiles!tickets_assigned_to_fkey(name, email), client:clients(name)';
+  '*, assigned_to_profile:profiles!tickets_assigned_to_fkey(name, email), created_by_profile:profiles!tickets_created_by_fkey(name), client:clients(name)';
 const TICKET_DETAIL_SELECT = `${TICKET_LIST_SELECT}, comments:ticket_comments(*, profile:profiles!ticket_comments_user_id_fkey(name))`;
 
 function normalizeTicket(ticket) {
@@ -19,10 +19,40 @@ function normalizeTicket(ticket) {
     return ticket;
   }
 
+  const status = ticket.status === 'open' ? 'pending' : ticket.status;
+  const completedAt =
+    status === 'completed'
+      ? ticket.completed_at || ticket.updated_at || new Date().toISOString()
+      : ticket.completed_at ?? null;
+
   return {
     ...ticket,
-    status: ticket.status === 'open' ? 'pending' : ticket.status,
+    status,
+    completed_at: completedAt,
   };
+}
+
+function normalizeTicketPayload(payload = {}) {
+  const nextPayload = {
+    ...payload,
+  };
+
+  const createdBy = payload.created_by ?? payload.user_id;
+  if (createdBy !== undefined) {
+    nextPayload.created_by = createdBy;
+  }
+
+  delete nextPayload.user_id;
+
+  if (nextPayload.status === 'completed' && !nextPayload.completed_at) {
+    nextPayload.completed_at = new Date().toISOString();
+  }
+
+  if (nextPayload.status && nextPayload.status !== 'completed' && nextPayload.completed_at === undefined) {
+    nextPayload.completed_at = null;
+  }
+
+  return nextPayload;
 }
 
 function doesTicketMatchFilters(ticket, filters = {}) {
@@ -77,19 +107,24 @@ export function useTickets(filters = {}) {
   });
 }
 
-export function useTicket(id) {
+export function useTicket(id, filters = {}) {
   return useQuery({
-    queryKey: [TICKETS_QUERY_KEY, id],
+    queryKey: [TICKETS_QUERY_KEY, id, filters],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tickets')
         .select(TICKET_DETAIL_SELECT)
-        .eq('id', id)
-        .single();
+        .eq('id', id);
+
+      if (filters.assigned_to) {
+        query = query.eq('assigned_to', filters.assigned_to);
+      }
+
+      const { data, error } = await query.single();
       if (error) throw error;
       return normalizeTicket(data);
     },
-    enabled: !!id,
+    enabled: !!id && (!filters.requireAssignedTo || !!filters.assigned_to),
   });
 }
 
@@ -99,7 +134,7 @@ export function useCreateTicket() {
     mutationFn: async (ticket) => {
       const { data, error } = await supabase
         .from('tickets')
-        .insert(ticket)
+        .insert(normalizeTicketPayload(ticket))
         .select(TICKET_LIST_SELECT)
         .single();
       if (error) throw error;
@@ -128,7 +163,7 @@ export function useUpdateTicket() {
     mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('tickets')
-        .update(updates)
+        .update(normalizeTicketPayload(updates))
         .eq('id', id)
         .select(TICKET_LIST_SELECT)
         .single();

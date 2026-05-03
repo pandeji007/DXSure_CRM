@@ -20,9 +20,10 @@ import { motion } from 'framer-motion';
 export default function DashboardPage() {
   const { isAdmin, profile } = useAuth();
   const { data: clients } = useClients();
-  const { data: leads } = useLeads();
+  const leadFilters = { assigned_to: isAdmin ? undefined : profile?.id };
+  const { data: leads } = useLeads(leadFilters);
   const { data: tickets } = useTickets();
-  const { data: followups } = useFollowUps({ user_id: isAdmin ? undefined : profile?.id });
+  const { data: followups } = useFollowUps({ created_by: isAdmin ? undefined : profile?.id });
   const { data: employees } = useEmployees();
   const { data: financeStats } = useFinanceStats({ created_by: isAdmin ? undefined : profile?.id });
 
@@ -76,7 +77,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Charts + Quick Actions */}
         <div className="lg:col-span-2 space-y-6">
-          <LeadChart />
+          <LeadChart filters={leadFilters} />
 
           {/* Upcoming Follow-Ups */}
           <Card hover={false}>

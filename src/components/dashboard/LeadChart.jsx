@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import Card from '../ui/Card';
 import { useLeads } from '../../hooks/useLeads';
 import Skeleton from '../ui/Skeleton';
@@ -24,8 +24,8 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export default function LeadChart() {
-  const { data: leads, isLoading } = useLeads();
+export default function LeadChart({ filters = {} }) {
+  const { data: leads, isLoading } = useLeads(filters);
 
   if (isLoading) {
     return (

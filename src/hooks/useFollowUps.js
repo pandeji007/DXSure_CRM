@@ -9,11 +9,34 @@ const FOLLOW_UP_SELECT = `
   *,
   client:clients(name),
   lead:leads(title, contact_name),
-  profile:profiles!follow_ups_user_id_fkey(name)
+  profile:profiles!follow_ups_created_by_fkey(name)
 `;
 
 function getFollowUpUserId(filters = {}) {
-  return filters.user_id ?? filters.created_by;
+  return filters.created_by ?? filters.user_id;
+}
+
+function normalizeFollowUpPayload(payload = {}) {
+  const nextPayload = {
+    ...payload,
+  };
+
+  const userId = payload.created_by ?? payload.user_id;
+  if (userId !== undefined) {
+    nextPayload.created_by = userId;
+  }
+
+  delete nextPayload.user_id;
+
+  if (nextPayload.status === 'completed' && !nextPayload.completed_at) {
+    nextPayload.completed_at = new Date().toISOString();
+  }
+
+  if (nextPayload.status && nextPayload.status !== 'completed' && nextPayload.completed_at === undefined) {
+    nextPayload.completed_at = null;
+  }
+
+  return nextPayload;
 }
 
 function doesFollowUpMatchFilters(followUp, filters = {}) {
@@ -30,7 +53,7 @@ function doesFollowUpMatchFilters(followUp, filters = {}) {
   }
 
   const userId = getFollowUpUserId(filters);
-  if (userId && followUp.user_id !== userId) {
+  if (userId && followUp.created_by !== userId) {
     return false;
   }
 
@@ -58,7 +81,7 @@ export function useFollowUps(filters = {}) {
 
       if (filters?.status) query = query.eq('status', filters.status);
       if (filters?.type) query = query.eq('type', filters.type);
-      if (getFollowUpUserId(filters)) query = query.eq('user_id', getFollowUpUserId(filters));
+      if (getFollowUpUserId(filters)) query = query.eq('created_by', getFollowUpUserId(filters));
       if (filters?.date_from) query = query.gte('scheduled_at', filters.date_from);
       if (filters?.date_to) query = query.lte('scheduled_at', filters.date_to);
 
@@ -77,7 +100,7 @@ export function useCreateFollowUp() {
     mutationFn: async (followUp) => {
       const { data, error } = await supabase
         .from('follow_ups')
-        .insert(followUp)
+        .insert(normalizeFollowUpPayload(followUp))
         .select(FOLLOW_UP_SELECT)
         .single();
 
@@ -116,7 +139,7 @@ export function useUpdateFollowUp() {
     mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('follow_ups')
-        .update(updates)
+        .update(normalizeFollowUpPayload(updates))
         .eq('id', id)
         .select(FOLLOW_UP_SELECT)
         .single();

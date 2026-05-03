@@ -32,7 +32,10 @@ create table if not exists public.clients (
   status text default 'active',
   source text,
   address text,
+  city text,
   notes text,
+  assigned_to uuid references public.profiles(id) on delete set null,
+  created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -44,12 +47,14 @@ create table if not exists public.leads (
   contact_email text,
   contact_phone text,
   company text,
-  status text default 'new',
-  priority text default 'medium',
-  source text,
+  status text default 'new' check (status in ('new', 'contacted', 'in_progress', 'qualified', 'converted', 'lost')),
+  priority text default 'medium' check (priority in ('low', 'medium', 'high', 'urgent')),
+  source text check (source in ('website', 'referral', 'social_media', 'cold_call', 'email', 'other')),
   value numeric,
   expected_close_date date,
   assigned_to uuid references public.profiles(id) on delete set null,
+  created_by uuid references public.profiles(id) on delete set null,
+  converted_client_id uuid references public.clients(id) on delete set null,
   notes text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -62,9 +67,10 @@ create table if not exists public.tickets (
   priority text default 'medium',
   status text default 'pending',
   assigned_to uuid references public.profiles(id) on delete set null,
+  created_by uuid references public.profiles(id) on delete set null,
   due_date date,
   client_id uuid references public.clients(id) on delete cascade,
-  user_id uuid references public.profiles(id),
+  completed_at timestamptz,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -82,11 +88,14 @@ create table if not exists public.follow_ups (
   type text not null,
   status text default 'scheduled',
   scheduled_at timestamptz not null,
+  completed_at timestamptz,
   notes text,
+  outcome text,
   client_id uuid references public.clients(id) on delete cascade,
   lead_id uuid references public.leads(id) on delete cascade,
-  user_id uuid references public.profiles(id) on delete cascade,
-  created_at timestamptz default now()
+  created_by uuid references public.profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 create table if not exists public.finance_entries (
@@ -118,11 +127,16 @@ create table if not exists public.day_plans (
 create table if not exists public.vendors (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
+  contact_person text,
   email text,
   phone text,
-  company text,
+  service_type text,
   address text,
+  city text,
+  status text default 'active',
   notes text,
+  created_by uuid references public.profiles(id) on delete set null,
+  company_name text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -142,6 +156,26 @@ alter table public.tickets
 
 alter table public.tickets
   alter column status set default 'pending';
+
+alter table public.clients
+  add column if not exists city text,
+  add column if not exists assigned_to uuid references public.profiles(id) on delete set null,
+  add column if not exists created_by uuid references public.profiles(id) on delete set null;
+
+alter table public.leads
+  add column if not exists created_by uuid references public.profiles(id) on delete set null,
+  add column if not exists converted_client_id uuid references public.clients(id) on delete set null;
+
+alter table public.vendors
+  add column if not exists contact_person text,
+  add column if not exists service_type text,
+  add column if not exists city text,
+  add column if not exists status text default 'active',
+  add column if not exists created_by uuid references public.profiles(id) on delete set null,
+  add column if not exists company_name text;
+
+alter table public.vendors
+  alter column status set default 'active';
 
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -193,6 +227,11 @@ create trigger set_day_plans_updated_at
   before update on public.day_plans
   for each row execute function public.set_updated_at();
 
+drop trigger if exists set_follow_ups_updated_at on public.follow_ups;
+create trigger set_follow_ups_updated_at
+  before update on public.follow_ups
+  for each row execute function public.set_updated_at();
+
 drop trigger if exists set_finance_entries_updated_at on public.finance_entries;
 create trigger set_finance_entries_updated_at
   before update on public.finance_entries
@@ -208,10 +247,12 @@ create index if not exists idx_profiles_department on public.profiles(department
 create index if not exists idx_clients_status on public.clients(status);
 create index if not exists idx_leads_status on public.leads(status);
 create index if not exists idx_leads_assigned_to on public.leads(assigned_to);
+create index if not exists idx_leads_created_by on public.leads(created_by);
+create index if not exists idx_leads_converted_client_id on public.leads(converted_client_id);
 create index if not exists idx_tickets_status on public.tickets(status);
 create index if not exists idx_tickets_assigned_to on public.tickets(assigned_to);
 create index if not exists idx_follow_ups_status on public.follow_ups(status);
-create index if not exists idx_follow_ups_user_id on public.follow_ups(user_id);
+create index if not exists idx_follow_ups_created_by on public.follow_ups(created_by);
 create index if not exists idx_follow_ups_scheduled_at on public.follow_ups(scheduled_at);
 create index if not exists idx_finance_entries_type on public.finance_entries(type);
 create index if not exists idx_finance_entries_created_by on public.finance_entries(created_by);
